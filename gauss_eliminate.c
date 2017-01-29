@@ -85,6 +85,37 @@ main(int argc, char** argv) {
 void 
 gauss_eliminate_using_openmp(const Matrix A, Matrix U)                  /* Write code to perform gaussian elimination using OpenMP. */
 {
+	int num_elements = MATRIX_SIZE;
+	int thread_cout = 2;
+	int i,j,k;
+
+	printf("Parallel code with %d elements. \n", num_elements);
+
+	#pragma omp parallel num_threads(thread_count) shared(num_elements, U) private (i,j,k)
+	{
+		#pragma omp for schedule(dynamic)
+		for (k = 0; k < num_elements; k++)
+		{
+			for (j = (k + 1); j < num_elements; j++)
+			{
+				U.elements[num_elements * k + j] = (float)(U.elements[num_elements * k + j] / U.elements[num_elements * k + k]);
+			}
+
+			U.elements[num_elements * k + k] = 1
+
+			for (i = (k+1); i < num_elements; i++)
+			{
+				for (j = (k+1); j < num_elements; j++)
+				{
+					U.elements[num_elements * i + j] = U.elements[num_elements * i + j] -\
+						(U.elements[num_elements * i + k] * U.elements[num_elements * k + j]);
+					U.elements[num_elements * i + k] = 0;
+				}
+			}
+
+		}
+	}
+
 }
 
 
