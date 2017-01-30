@@ -16,6 +16,7 @@
 
 #define MIN_NUMBER 2
 #define MAX_NUMBER 50
+#define THREAD_COUNT 4
 
 extern int compute_gold(float*, const float*, unsigned int);
 Matrix allocate_matrix(int num_rows, int num_columns, int init);
@@ -51,7 +52,8 @@ main(int argc, char** argv) {
 	int status = compute_gold(reference.elements, A.elements, A.num_rows);
 
 	gettimeofday(&stop, NULL);
-	printf("CPU run time = %0.2f s. \n", (float)(stop.tv_sec - start.tv_sec + (stop.tv_usec - start.tv_usec)/(float)1000000));
+	float o_run_time = (float)(stop.tv_sec - start.tv_sec + (stop.tv_usec - start.tv_usec)/(float)1000000);
+    printf("CPU run time = %0.2f s. \n", o_run_time);
 
 	if(status == 0){
 		printf("Failed to convert given matrix to upper triangular. Try again. Exiting. \n");
@@ -63,11 +65,16 @@ main(int argc, char** argv) {
 		exit(0); 
 	}
 	printf("Gaussian elimination using the reference code was successful. \n");
-
+    
+gettimeofday(&start, NULL);
 	/* WRITE THIS CODE: Perform the Gaussian elimination using the multi-threaded OpenMP version. 
      * The resulting upper triangular matrix should be returned in U
      * */
 	gauss_eliminate_using_openmp(A, U);
+
+    gettimeofday(&stop, NULL);
+    float omp_run_time = (float)(stop.tv_sec - start.tv_sec + (stop.tv_usec - start.tv_usec)/(float)1000000);
+    printf("OMP CPU run time = %0.2f s. \n", omp_run_time);
 
 	/* check if the OpenMP result is equivalent to the expected solution. */
 	int size = MATRIX_SIZE*MATRIX_SIZE;
@@ -91,7 +98,7 @@ gauss_eliminate_using_openmp(const Matrix A, Matrix U)                  /* Write
 
 	printf("Parallel code with %d elements. \n", num_elements);
 
-	#pragma omp parallel num_threads(thread_count) shared(num_elements, U) private (i,j,k)
+	#pragma omp parallel num_threads(THREAD_COUNT) shared(num_elements, U) private (i,j,k)
 	{
 		#pragma omp for schedule(dynamic)
 		for (k = 0; k < num_elements; k++)
@@ -101,7 +108,7 @@ gauss_eliminate_using_openmp(const Matrix A, Matrix U)                  /* Write
 				U.elements[num_elements * k + j] = (float)(U.elements[num_elements * k + j] / U.elements[num_elements * k + k]);
 			}
 
-			U.elements[num_elements * k + k] = 1
+			U.elements[num_elements * k + k] = 1;
 
 			for (i = (k+1); i < num_elements; i++)
 			{
