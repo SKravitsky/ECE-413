@@ -66,12 +66,15 @@ void run_test(int num_elements)
 	// Compute the histogram using openmp. The result histogram should be stored on the histogram_using_openmp array
 	printf("\n");
 	printf("Creating histogram using OpenMP. \n");
+	gettimeofday(&start, NULL);
 	compute_using_openmp(input_data, histogram_using_openmp, num_elements, HISTOGRAM_SIZE);
-	// check_histogram(histogram_using_openmp, num_elements, HISTOGRAM_SIZE);
+	gettimeofday(&stop, NULL);
+	printf("CPU run time = %0.2f s. \n", (float)(stop.tv_sec - start.tv_sec + (stop.tv_usec - start.tv_usec)/(float)1000000));
+	check_histogram(histogram_using_openmp, num_elements, HISTOGRAM_SIZE);
 
 	// Compute the differences between the reference and pthread results
 	diff = 0.0;
-   for(i = 0; i < HISTOGRAM_SIZE; i++)
+	for(i = 0; i < HISTOGRAM_SIZE; i++)
 		diff = diff + abs(reference_histogram[i] - histogram_using_openmp[i]);
 
 	printf("Difference between the reference and OpenMP results: %f. \n", diff);
@@ -85,26 +88,50 @@ void run_test(int num_elements)
 /* This function computes the reference solution. */
 void compute_gold(int *input_data, int *histogram, int num_elements, int histogram_size)
 {
-  int i;
+	int i;
   
-  // Initialize histogram
-  for(i = 0; i < histogram_size; i++) 
-			 histogram[i] = 0; 
+	// Initialize histogram
+	for(i = 0; i < histogram_size; i++) 
+		histogram[i] = 0; 
 
-  // Bin the elements in the input stream
-  for(i = 0; i < num_elements; i++)
-			 histogram[input_data[i]]++;
+	// Bin the elements in the input stream
+	for(i = 0; i < num_elements; i++)
+		histogram[input_data[i]]++;
 }
 
 
 // Write the function to compute the histogram using openmp
 void compute_using_openmp(int *input_data, int *histogram, int num_elements, int histogram_size)
 {
-	int i;
-	// Initialize histogram
-  for(i = 0; i < histogram_size; i++) 
-			 histogram[i] = 0; 
+	int i; 
+
+	//Initialize histogram
+	for(i = 0; i < histogram_size; i++) 
+ 		histogram[i] = 0;
+ 	
+	#pragma omp parallel num_threads(NUM_THREADS) private(i) 
+ 	{
+ 	
+	int * private_hist = (int *)malloc(sizeof(int) * HISTOGRAM_SIZE);
+ 
+ 	#pragma omp for nowait
+ 	for (int x = 0; x < NUM_THREADS; x++) 
+	{
+ 		for (int y = 0; y < num_elements ; y +=NUM_THREADS)
+		{
+  			private_hist[input_data[x+y]]++;
+ 		}
+	}
+	
+	#pragma omp critical
+      	for ( i = 0; i <histogram_size; i++) 
+      		histogram[i] +=private_hist[i];
+
+   	}
 }
+
+
+
 
 void check_histogram(int *histogram, int num_elements, int histogram_size)
 {
