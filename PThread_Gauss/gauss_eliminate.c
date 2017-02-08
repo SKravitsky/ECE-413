@@ -16,7 +16,7 @@
 
 #define MIN_NUMBER 2
 #define MAX_NUMBER 50
-#define NUM_THREADS 16
+#define NUM_THREADS 8
 
 typedef struct param_t {
     pthread_mutex_t* lock;
@@ -133,9 +133,6 @@ gauss_eliminate_using_pthreads (Matrix U)
 	params->num_elements = MATRIX_SIZE * MATRIX_SIZE;
 	params->U = (float*)U.elements;
 	
-	int num_elements = MATRIX_SIZE * MATRIX_SIZE;
-	int k = 0;
-
 	pthread_mutex_init(&mutex_lock,NULL);
     puts("here"); 
     int i=0;
@@ -151,21 +148,8 @@ gauss_eliminate_using_pthreads (Matrix U)
         if(rv)
             printf("Error joining threads");
     }
-	
-	for(k = 0; k < num_elements; k++)
-	{
-		U[num_elements * k + k] = 1;  // Set the principal diagonal entry in U to be 1
-  		for (i = (k + 1); i < num_elements; i++)
-  		{
-    		for (j = (k + 1); j < num_elements; j++)
-        	{
-				U[num_elements * i + j] = U[num_elements * i + j] - (U[num_elements * i + k] * U[num_elements * k + j]);    // Elimination step
 
-      			U[num_elements * i + k] = 0;
-    		}
-		}
 
-	}
 }
 
 void* compute_gold_p(void* args_in) {
@@ -185,8 +169,9 @@ void* compute_gold_p(void* args_in) {
 	pthread_mutex_unlock(&mutex_lock);
     while(incr != thread_num){
 	}
+
 	int i,j,k;
-	int start_val = thread_num* (num_elements/NUM_THREADS);
+	int start_val = thread_num * (num_elements/NUM_THREADS);
     int end_val = start_val + (num_elements/NUM_THREADS);
 
     for(k=start_val; k<end_val; k++)
@@ -195,13 +180,23 @@ void* compute_gold_p(void* args_in) {
     	{           // Reduce the current row
       		if (U[num_elements * k + k] == 0)
         		{
-          			printf
-        			("Numerical instability detected. The principal diagonal element is zero. \n");
+          			printf("Numerical instability detected. The principal diagonal element is zero. \n");
           			return 0;
         		}
       		U[num_elements * k + j] = (float) (U[num_elements * k + j] / U[num_elements * k + k]);    // Division step
     	}
+      	
+		U[num_elements * k + k] = 1;  // Set the principal diagonal entry in U to be 1
+      	
+		for (i = (k + 1); i < num_elements; i++)
+    	{
+      		for (j = (k + 1); j < num_elements; j++)
+        		U[num_elements * i + j] = U[num_elements * i + j] - (U[num_elements * i + k] * U[num_elements * k + j]);    // Elimination step
+
+      			U[num_elements * i + k] = 0;
+    	}
     }
+
     incr++;
 	threads_remaining--;
 
