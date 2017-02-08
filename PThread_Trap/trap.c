@@ -30,6 +30,12 @@
 
 double compute_using_pthreads(float, float, int, float);
 double compute_gold(float, float, int, float);
+void pthread_compute(void* rank);
+
+double area = 0.0;
+pthread_mutex_t mutex;
+int local_n;
+
 
 int main(void) 
 {
@@ -82,7 +88,46 @@ double compute_gold(float a, float b, int n, float h) {
 /* Complete this function to perform the trapezoidal rule on the GPU. */
 double compute_using_pthreads(float a, float b, int n, float h)
 {
-		  return 0.0;
+	int i;
+	pthread_t* thread_handles;
+	
+	local_n = n / NUM_THREADS;
+	thread_handles = malloc (NUM_THREADS*sizeof(pthread_t));
+	
+	pthread_mutex_init(&mutex, NULL);
+	
+	for(i = 0; i < NUM_THREADS; i++)
+	{
+		pthread_create(&thread_handles[i], NULL, pthread_compute, (void*) i);
+	}
+	
+	for(i = 0; i < NUM_THREADS; i++)
+	{
+		pthread_join(thread_handles[i], NULL);
+	}
+
+	pthread_mutex_destroy(&mutex);
+	free(thread_handles);
+
+	return area;
 }
 
+void pthread_compute(void* rank)
+{
+	double local_a;
+	double local_b;
+	double my_int;
+	long my_rank = (long) rank;
+	double h;
+	
+	h = (RIGHT_ENDPOINT - LEFT_ENDPOINT)/(float) NUM_TRAPEZOIDS;
+	local_a = LEFT_ENDPOINT + my_rank*local_n*h;
+	local_b = local_a + local_n*h;
+
+	my_int = compute_gold(local_a, local_b, local_n, h);
+	pthread_mutex_lock(&mutex);
+	area += my_int;
+	pthread_mutex_unlock(&mutex);
+
+}
 
