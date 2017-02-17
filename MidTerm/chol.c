@@ -11,6 +11,7 @@
 #include <math.h>
 #include "chol.h"
 
+#define NUM_THREADS 4 
 
 ////////////////////////////////////////////////////////////////////////////////
 // declarations, forward
@@ -70,26 +71,26 @@ int main(int argc, char** argv)
 	}
 	
 	
-	printf("Double checking for correctness by recovering the original matrix. \n");
-	if(check_chol(A, reference) == 0){
-		printf("Error performing Cholesky decomposition on the CPU. Try again. Exiting. \n");
-		exit(0);
-	}
-	printf("Cholesky decomposition on the CPU was successful. \n");
+	//printf("Double checking for correctness by recovering the original matrix. \n");
+	//if(check_chol(A, reference) == 0){
+	//	printf("Error performing Cholesky decomposition on the CPU. Try again. Exiting. \n");
+	//	exit(0);
+	//}
+	//printf("Cholesky decomposition on the CPU was successful. \n");
 
 	/* MODIFY THIS CODE: Perform the Cholesky decomposition using pthreads. The resulting upper triangular matrix should be returned in 
 	 U_pthreads */
-	chol_using_pthreads(A, U_pthreads);
+	//chol_using_pthreads(A, U_pthreads);
 
 	/* MODIFY THIS CODE: Perform the Cholesky decomposition using openmp. The resulting upper traingular matrix should be returned in U_openmp */
 	chol_using_openmp(A, U_openmp);
 
 
 	// Check if the pthread and openmp results are equivalent to the expected solution
-	if(check_chol(A, U_pthreads) == 0) 
-			  printf("Error performing Cholesky decomposition using pthreads. \n");
-	else
-			  printf("Cholesky decomposition using pthreads was successful. \n");
+	//if(check_chol(A, U_pthreads) == 0) 
+	//		  printf("Error performing Cholesky decomposition using pthreads. \n");
+	//else
+	//		  printf("Cholesky decomposition using pthreads was successful. \n");
 
 	if(check_chol(A, U_openmp) == 0) 
 			  printf("Error performing Cholesky decomposition using openmp. \n");
@@ -114,6 +115,49 @@ void chol_using_pthreads(const Matrix A, Matrix U)
 /* Write code to perform Cholesky decopmposition using openmp. */
 void chol_using_openmp(const Matrix A, Matrix U)
 {
+	printf("Starting openMP \n");
+	unsigned int i, j, k; 
+	unsigned int size = A.num_rows * A.num_columns;
+
+	// Copy the contents of the A matrix into the working matrix U
+	for (i = 0; i < size; i ++)
+		U.elements[i] = A.elements[i];
+
+	// Perform the Cholesky decomposition in place on the U matrix
+	for(k = 0; k < U.num_rows; k++){
+			  // Take the square root of the diagonal element
+		U.elements[k * U.num_rows + k] = sqrt(U.elements[k * U.num_rows + k]);
+			  //if(U.elements[k * U.num_rows + k] <= 0){
+						 //printf("Cholesky decomposition failed. \n");
+						 //return 0;
+			  //}
+		#pragma omp parallel num_threads(NUM_THREADS) private(i,j) shared(k)
+		{
+			#pragma omp for
+			// Division step
+			for(j = (k + 1); j < U.num_rows; j++)
+				U.elements[k * U.num_rows + j] /= U.elements[k * U.num_rows + k]; // Division step
+			
+			#pragma omp barrier
+			#pragma omp for
+			  // Elimination step
+			  for(i = (k + 1); i < U.num_rows; i++)
+						 for(j = i; j < U.num_rows; j++)
+									U.elements[i * U.num_rows + j] -= U.elements[k * U.num_rows + i] * U.elements[k * U.num_rows + j];
+		}
+	}
+
+	// As the final step, zero out the lower triangular portion of U
+	for(i = 0; i < U.num_rows; i++)
+			  for(j = 0; j < i; j++)
+						 U.elements[i * U.num_rows + j] = 0.0;
+
+	// printf("The Upper triangular matrix is: \n");
+	// print_matrix(U);
+
+	//return 1;
+
+
 }
 
 
