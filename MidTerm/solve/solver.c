@@ -15,6 +15,7 @@ gcc -o solver solver.c solver_gold.c -fopenmp -std=c99 -lm -lpthread
 #include <stdlib.h>
 #include <math.h>
 #include "grid.h" // This file defines the grid data structure
+#include <sys/time.h>
 
 #define NUM_THREADS 4
 
@@ -80,135 +81,97 @@ void create_grids(GRID_STRUCT *grid_1, GRID_STRUCT *grid_2, GRID_STRUCT *grid_3)
 /* Edit this function to use the jacobi method of solving the equation. The final result should be placed in the final_grid_1 data structure */
 int compute_using_pthread_jacobi(GRID_STRUCT *grid_2)
 {
-	printf("Testing Jacobi \n");
+	//printf("Testing Jacobi \n");
 	int num_iter = 0;
 	int done = 0;
 	float diff;
-	float temp2; 
+	float temp; 
 	
-	GRID_STRUCT *temp = (GRID_STRUCT *)malloc(sizeof(GRID_STRUCT));
-	temp->dimension = grid_2->dimension;
-	temp->num_elements = grid_2->num_elements;
-	temp->element = (float *)malloc(sizeof(float) * temp->num_elements);
-	for(int i = 0; i < temp->dimension; i++)
-	{
-		for(int j = 0; j < temp->dimension; j++)
-		{
-			temp->element[ i * grid_2->dimension + j] = grid_2->element[i * grid_2->dimension + j];
-		}
-	}
-	
-	
-	printf("Testing 2 \n");
-	while(!done){ // While we have not converged yet 
-		printf("Testing3 \n");
-		printf("Iteration %d; ", num_iter);
-		diff = 0;	
-		#pragma omp parallel num_threads(NUM_THREADS)
-		{
-			printf("Inside Pragma1 \n");
-			#pragma omp parallel for
-			for(int i = 1; i < (grid_2->dimension-1); i++)
-			{
-				for(int j = 1; (grid_2->dimension-1); j++)
-				{
-					temp2 = temp->element[i * temp->dimension + j];
-					// Apply the update rule	
-					temp->element[i * temp->dimension + j] = 0.20*(temp->element[i * temp->dimension + j] + 
-																						 grid_2->element[(i - 1) * grid_2->dimension + j] + 
-																						 grid_2->element[(i + 1) * grid_2->dimension + j] + 
-								  														 grid_2->element[i * grid_2->dimension + (j + 1)] +  
-																						 grid_2->element[i * grid_2->dimension + (j - 1)]);
-					diff = diff + fabs(grid_2->element[i * grid_2->dimension + j] - temp2); 	
-				}
-			}
-			
-			#pragma omp parallel for
-			for(int i = 1; i < (grid_2->dimension-1); i++)
-			{
-				for(int j = 1; (grid_2->dimension-1); j++)
-				{
-					temp2 = temp->element[i * temp->dimension + j];
-					// Apply the update rule	
-					grid_2->element[i * grid_2->dimension + j] = 0.20*(temp->element[i * temp->dimension + j] + 
-																						 temp->element[(i - 1) * temp->dimension + j] + 
-																						 temp->element[(i + 1) * temp->dimension + j] + 
-								  														 temp->element[i * temp->dimension + (j + 1)] +  
-																						 temp->element[i * temp->dimension + (j - 1)]);
-					diff = diff + fabs(grid_2->element[i * grid_2->dimension + j] - temp2); 	
-				}
-			}	
-	
-		/* End of an iteration. Check for convergence */
-		num_iter++;
-		printf("diff = %f \n", diff);
-		if((float)diff/((float)(grid_2->dimension*grid_2->dimension)) < (float)TOLERANCE) done = 1;
-		}
-	}
-	return num_iter;
 
-	return 0;		
+	
+	//printf("Testing 2 \n");
+	while(!done){ // While we have not converged yet
+		//printf("Testing while loop \n");
+        printf("Iteration %d; ", num_iter);
+        diff = 0;
+		#pragma omp parallel num_threads(NUM_THREADS)
+        {
+            int i, j;
+            //printf("Pragma1 Test");
+			#pragma omp for private(i,j)
+            for(i = 1; i < (grid_2->dimension-1)/NUM_THREADS; i++)
+            {
+                for(j = 1; j < (grid_2->dimension-1)/NUM_THREADS; j++)
+                {
+                    temp = grid_2->element[i * grid_2->dimension + j];
+                    // Apply the update rule
+                    grid_2->element[i * grid_2->dimension + j] = 0.20*(grid_2->element[i * grid_2->dimension + j] +
+                                                                       grid_2->element[(i - 1) * grid_2->dimension + j] +
+                                                                       grid_2->element[(i + 1) * grid_2->dimension + j] +
+                                                                       grid_2->element[i * grid_2->dimension + (j + 1)] +
+                                                                       grid_2->element[i * grid_2->dimension + (j - 1)]);
+                    diff = diff + fabs(grid_2->element[i * grid_2->dimension + j] - temp);
+                }
+
+            }
+            
+        }
+        /* End of an iteration. Check for convergence */
+        num_iter++;
+        printf("diff = %f \n", diff);
+        if((float)diff/((float)(grid_2->dimension*grid_2->dimension)) < (float)TOLERANCE) done = 1;
+    }
+    return num_iter;
+
+//return 0;
 }
 
 /* Edit this function to use the red-black method of solving the equation. The final result should be placed in the final_grid_2 data structure */
 int compute_using_pthread_red_black(GRID_STRUCT *grid_3)
 {
-	printf("Testing OpenMP \n");
+	//printf("Testing OpenMP \n");
 	int num_iter = 0;
 	int done = 0;
 	float diff;
-	float temp; 
-		
-	
-	printf("Testing 2 \n");
-	while(!done){ // While we have not converged yet 
-		printf("Testing3 \n");
-		printf("Iteration %d; ", num_iter);
-		diff = 0;	
-		#pragma omp parallel num_threads(NUM_THREADS)
-		{
-			printf("Inside Pragma1 \n");
-			#pragma omp parallel for
-			for(int i = 1; i < (grid_3->dimension-1); i++)
-			{
-				for(int j = (i%2) + 1; (grid_3->dimension-1); j+=2)
-				{
-					temp = grid_3->element[i * grid_3->dimension + j];
-					// Apply the update rule	
-					grid_3->element[i * grid_3->dimension + j] = 0.20*(grid_3->element[i * grid_3->dimension + j] + 
-																						 grid_3->element[(i - 1) * grid_3->dimension + j] + 
-																						 grid_3->element[(i + 1) * grid_3->dimension + j] + 
-								  														 grid_3->element[i * grid_3->dimension + (j + 1)] + 
-																						 grid_3->element[i * grid_3->dimension + (j - 1)]);
-					diff = diff + fabs(grid_3->element[i * grid_3->dimension + j] - temp); 	
-				}
-			}
-		
-			#pragma omp parallel for
-			for(int i = 1; i < (grid_3->dimension-1); i++)
-			{
-				for(int j = ((i+1)%2) + 1; (grid_3->dimension-1); j+=2)
-				{
-					temp = grid_3->element[i * grid_3->dimension + j];
-			  		// Apply the update rule	
-					grid_3->element[i * grid_3->dimension + j] = 0.20*(grid_3->element[i * grid_3->dimension + j] + 
-																						 grid_3->element[(i - 1) * grid_3->dimension + j] + 
-																						 grid_3->element[(i + 1) * grid_3->dimension + j] + 
-								  														 grid_3->element[i * grid_3->dimension + (j + 1)] + 
-																						 grid_3->element[i * grid_3->dimension + (j - 1)]);
-					diff = diff + fabs(grid_3->element[i * grid_3->dimension + j] - temp); 	
-				}
-			}
-		
-		
-		/* End of an iteration. Check for convergence */
-		num_iter++;
-		printf("diff = %f \n", diff);
-		if((float)diff/((float)(grid_3->dimension*grid_3->dimension)) < (float)TOLERANCE) done = 1;
-		}
-	}
-	return num_iter;
+	float temp; 	
+	int color = 0; //Creating a way to alternate the colors between red and black
 
+	//printf("Testing 2 \n");
+	while(!done){ // While we have not converged yet
+		//printf("Testing while loop \n");
+        printf("Iteration %d; ", num_iter);
+        diff = 0;
+		#pragma omp parallel num_threads(NUM_THREADS)
+        {
+            int i, j;
+            //printf("Pragma1 Test");
+			#pragma omp for private(i,j)
+            for(i = 1; i < (grid_3->dimension-1)/NUM_THREADS; i++)
+            {
+                for(j = 1 + color; j < (grid_3->dimension-1)/NUM_THREADS; j+=2)
+                {
+                    temp = grid_3->element[i * grid_3->dimension + j];
+                    // Apply the update rule
+                    grid_3->element[i * grid_3->dimension + j] = 0.20*(grid_3->element[i * grid_3->dimension + j] +
+                                                                       grid_3->element[(i - 1) * grid_3->dimension + j] +
+                                                                       grid_3->element[(i + 1) * grid_3->dimension + j] +
+                                                                       grid_3->element[i * grid_3->dimension + (j + 1)] +
+                                                                       grid_3->element[i * grid_3->dimension + (j - 1)]);
+                    diff = diff + fabs(grid_3->element[i * grid_3->dimension + j] - temp);
+                }
+
+                color++;
+                color = color % 2;
+
+            }
+            
+        }
+        /* End of an iteration. Check for convergence */
+        num_iter++;
+        printf("diff = %f \n", diff);
+        if((float)diff/((float)(grid_3->dimension*grid_3->dimension)) < (float)TOLERANCE) done = 1;
+    }
+    return num_iter;
 
 //return 0;		
 }
@@ -217,6 +180,8 @@ int compute_using_pthread_red_black(GRID_STRUCT *grid_3)
 /* The main function */
 int main(int argc, char **argv)
 {	
+
+
 	/* Generate the grids and populate them with the same set of random values. */
 	GRID_STRUCT *grid_1 = (GRID_STRUCT *)malloc(sizeof(GRID_STRUCT)); 
 	GRID_STRUCT *grid_2 = (GRID_STRUCT *)malloc(sizeof(GRID_STRUCT)); 
@@ -234,20 +199,38 @@ int main(int argc, char **argv)
 
 	int num_iter;
 	// Compute the reference solution
-	//printf("Using the single threaded version to solve the grid. \n");
-	//int num_iter = compute_gold(grid_1);	
-	//printf("Convergence achieved after %d iterations. \n", num_iter);
+	struct timeval start, stop;
+	printf("Using the single threaded version to solve the grid. \n");
+	gettimeofday(&start,NULL);
+	
+	num_iter = compute_gold(grid_1);
+	
+	gettimeofday(&stop,NULL);	
+	printf("Convergence achieved after %d iterations. \n", num_iter);
+	printf ("CPU run time = %0.2f s. \n", (float) (stop.tv_sec - start.tv_sec + (stop.tv_usec - start.tv_usec) / (float) 1000000));
 	
 	// Use pthreads to solve the equation uisng the red-black parallelization technique
-	//printf("Using the pthread implementation to solve the grid using the red-black parallelization method. \n");
-	//num_iter = compute_using_pthread_red_black(grid_2);
-	//printf("Convergence achieved after %d iterations. \n", num_iter);
+	struct timeval start1, stop1;
+	printf("Using the pthread implementation to solve the grid using the red-black parallelization method. \n");
+	gettimeofday(&start1,NULL);
+	
+	num_iter = compute_using_pthread_red_black(grid_3);
+	
+	gettimeofday(&stop1,NULL);	
+	printf("Convergence achieved after %d iterations. \n", num_iter);
+	printf ("CPU run time = %0.2f s. \n", (float) (stop1.tv_sec - start1.tv_sec + (stop1.tv_usec - start1.tv_usec) / (float) 1000000));
 
 	
 	// Use pthreads to solve the equation using the jacobi method in parallel
+	struct timeval start2, stop2;	
 	printf("Using the pthread implementation to solve the grid using the jacobi method. \n");
-	num_iter = compute_using_pthread_jacobi(grid_3);
+	gettimeofday(&start2,NULL);	
+	
+	num_iter = compute_using_pthread_jacobi(grid_2);
+	gettimeofday(&stop2,NULL);	
+
 	printf("Convergence achieved after %d iterations. \n", num_iter);
+	printf("CPU run time = %0.2f s. \n", (float) (stop2.tv_sec - start2.tv_sec + (stop2.tv_usec - start2.tv_usec) / (float) 1000000));
 
 
 	// Print key statistics for the converged values
@@ -256,10 +239,18 @@ int main(int argc, char **argv)
 	print_statistics(grid_1);
 
 	printf("Red-black: \n");
-	print_statistics(grid_2);
+	print_statistics(grid_3);
 		
 	printf("Jacobi: \n");
-	print_statistics(grid_3);
+	print_statistics(grid_2);
+
+	printf("Single Thread CPU run time = %0.2f s. \n", (float) (stop.tv_sec - start.tv_sec + (stop.tv_usec - start.tv_usec) / (float) 1000000));
+
+	printf("Jacobi CPU run time = %0.2f s. \n", (float) (stop2.tv_sec - start2.tv_sec + (stop2.tv_usec - start2.tv_usec) / (float) 1000000));
+
+	printf("Red/Black CPU run time = %0.2f s. \n", (float) (stop1.tv_sec - start1.tv_sec + (stop1.tv_usec - start1.tv_usec) / (float) 1000000));
+
+
 
 	// Free the grid data structures
 	free((void *)grid_1->element);	
