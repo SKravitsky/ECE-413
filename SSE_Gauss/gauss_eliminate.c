@@ -85,87 +85,143 @@ main(int argc, char** argv) {
 void 
 gauss_eliminate_using_sse(const Matrix A, Matrix U)                  /* Write code to perform gaussian elimination using OpenMP. */
 {
-	int i, j, k;
-	int row_i, row_t, col_j;
-	int rows = A.num_rows;
-	int cols = A.num_columns;
+	unsigned int i, j, k;
 
-	for(i = 0; i < rows; i++)
-	{
-		for(j = 0; j < cols; j++)
-		{
-			U.elements[rows * i + j] = A.elements[rows * i + j];
-		}
-	}
+    unsigned int rows = A.num_rows;
+    unsigned int cols = A.num_columns;
 
-	float *ptr;
+
+    /* Copy the contents of the A matrix into the U matrix. */
+    for (i = 0; i < rows; ++i)
+    {
+        for(j = 0; j < cols; ++j)
+        {
+            U.elements[rows * i + j] = A.elements[rows * i + j];
+        }
+    }
+
+    unsigned int row;
+    unsigned int col;
+    unsigned int row_2;
+
+    float *ptr;
     __m128 *src;
     __m128 op_1;
     __m128 op_2;
 
-	for(row_i = 0; row_i < rows; row_i++)
-	{
-		for(col_j = (row_i + 1); col_j < cols; col_j++)
-		{
-			U.elements[rows * row_i + col_j] = (float)(U.elements[rows * row_i + col_j] / U.elements[rows * row_i + col_j]);
-		}
+    /* Perform Gaussian elimination in place on the U matrix. */
+    for (row = 0; row < rows; ++row)
+    {
 
-		src = (__m128 *)(U.elements + (rows * row_i + col_j));
-		op_1 = _mm_set_ps1(U.elements[rows * row_i + row_i]);
-
-		for(; col_j < cols; col_j += 4)
-		{
-			*src = _mm_div_ps(*src, op_1);
-			src++;
-		}
-
-        if (col_j != cols)
+        if (U.elements[rows * row + row] == 0)
         {
-            col_j -= 4;
-            for (; col_j < cols; col_j++)
+            printf("Numerical instability detected. The principal diagonal element is zero. \n");
+            return;
+        }
+
+        // Serial code
+
+        /*
+        for (col = (row + 1); col < cols; ++col)
+        {
+            U.elements[rows * row + col] = (float)(U.elements[rows * row + col] / U.elements[rows * row + row]);
+        }
+        */
+
+
+        // process any elements preceding 16byte alignment
+        for (col = (row + 1); col < cols; ++col)
+        {
+            // If element ptr is 16byte aligned, start multiprocessing
+            if (!((long)(U.elements + (rows * row) + col) & 0xF))
             {
-                U.elements[rows * row_i + col_j] = (float)(U.elements[rows * row_i + col_j] / U.elements[rows * row_i + row_i]);
+                break;
+            }
+
+            U.elements[rows * row + col] = (float)(U.elements[rows * row + col] / U.elements[rows * row + row]);
+        }
+
+        // ASSUMPTION: src is 16byte aligned
+        src = (__m128 *)(U.elements + (rows * row + col));
+        op_1 = _mm_set_ps1(U.elements[rows * row + row]);
+
+        for (; col < cols; col += 4)
+        {
+
+            *src = _mm_div_ps(*src, op_1);
+            ++src;
+        }
+
+        // Process elements which cannot fill a 16byte word
+        if (col != cols)
+        {
+            col -= 4;
+            for (; col < cols; ++col)
+            {
+                U.elements[rows * row + col] = (float)(U.elements[rows * row + col] / U.elements[rows * row + row]);
             }
         }
 
-        U.elements[rows * row_i + row_i] = 1;
+        /* Set the principal diagonal entry in U to be 1. */
+        U.elements[rows * row + row] = 1;
 
-        for (row_t = (row_i + 1); row_t < rows; row_t++)
+        for (row_2 = (row + 1); row_2 < rows; ++row_2)
         {
 
-            for (col_j = (row_i + 1); col_j < cols; col_j++)
+            // Serial Code
+            /*
+            for (col = (row + 1); col < cols; ++col)
             {
+                U.elements[rows * row_2 + col] = U.elements[rows * row_2 + col]
+                                               - ( U.elements[rows * row_2 + row]
+                                                 * U.elements[rows * row + col]
+                                                 );
+            }
+            */
 
-                U.elements[rows * row_t + col_j] = U.elements[rows * row_t + col_j]
-                                               - ( U.elements[rows * row_t + row_i]
-                                                 * U.elements[rows * row_i + col_j]
+            // process any elements preceding 16byte alignment
+            for (col = (row + 1); col < cols; ++col)
+            {
+                // If element ptr is 16byte aligned, start multiprocessing
+                if (!((long)(U.elements + (rows * row) + col) & 0xF))
+                {
+                    break;
+                }
+                U.elements[rows * row_2 + col] = U.elements[rows * row_2 + col]
+                                               - ( U.elements[rows * row_2 + row]
+                                                 * U.elements[rows * row + col]
                                                  );
             }
 
-            src = (__m128 *)(U.elements + (rows * row_t + col_j));
-            op_1 = _mm_set_ps1(U.elements[rows * row_t + row_i]);
+            // ASSUMPTION: src is 16byte aligned
+            src = (__m128 *)(U.elements + (rows * row_2 + col));
+            op_1 = _mm_set_ps1(U.elements[rows * row_2 + row]);
 
-            for (; col_j < cols; col_j += 4)
+            for (; col < cols; col += 4)
             {
-                op_2 = _mm_load_ps(U.elements + (rows * row_i) + col_j);
+                // op_2 = U.elements[rows * row + col]
+                op_2 = _mm_load_ps(U.elements + (rows * row) + col);
+                // op_2 = U.elements[rows * row_2 + row] * U.elements[rows * row + col]
                 op_2 = _mm_mul_ps(op_1, op_2);
+                // U.elements[rows * row_2 + col] -= op_2
                 *src = _mm_sub_ps(*src, op_2);
-                src++;
+                ++src;
             }
 
-            if (col_j != cols)
+            // Process elements which cannot fill a 16byte word
+            if (col != cols)
             {
-                col_j -= 4;
-                for (; col_j < cols; col_j++)
+                col -= 4;
+                for (; col < cols; ++col)
                 {
-                    U.elements[rows * row_t + col_j] = U.elements[rows * row_t + col_j]
-                                                   - ( U.elements[rows * row_t + row_i]
-                                                     * U.elements[rows * row_i + col_j]
+                    U.elements[rows * row_2 + col] = U.elements[rows * row_2 + col]
+                                                   - ( U.elements[rows * row_2 + row]
+                                                     * U.elements[rows * row + col]
                                                      );
                 }
             }
 
-            U.elements[rows * row_t + row_i] = 0;
+            U.elements[rows * row_2 + row] = 0;
         }
     }
 }
