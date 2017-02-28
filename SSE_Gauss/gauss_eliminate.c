@@ -84,6 +84,89 @@ main(int argc, char** argv) {
 void 
 gauss_eliminate_using_sse(const Matrix A, Matrix U)                  /* Write code to perform gaussian elimination using OpenMP. */
 {
+	int i, j, k;
+	int row_i, row_t, col_j;
+	int rows = A.num_rows;
+	int cols = A.num_columns;
+
+	for(i = 0; i < rows; i++)
+	{
+		for(j = 0; j < cols; j++)
+		{
+			U.elements[rows * i + j] = A.elements[rows * i + j];
+		}
+	}
+
+	float *ptr;
+	__m128 *src;
+	__m128 op_1;
+	__m128 op_2;
+
+	for(row_i = 0; row_i < rows; row_i++)
+	{
+		for(col_j = (row_i + 1); col_j++)
+		{
+			U.elements[rows * row_i + col_j] = (float)(U.elements[rows * row_i + col_j] / U.elements[rows * row_i + col_j]);
+		}
+
+		src = (__m128 *)(U.elements + (rows * row_i + col_j));
+		op_1 = _mm_set_ps1(U.elements[rows * row_i + row_i]);
+
+		for(; col_j < cols; col_j += 4)
+		{
+			*src = _mm_div_ps(*src, op_1);
+			src++;
+		}
+
+        if (col_j != cols)
+        {
+            col_j -= 4;
+            for (; col_j < cols; col_j++)
+            {
+                U.elements[rows * row_i + col_j] = (float)(U.elements[rows * row_i + col_j] / U.elements[rows * row_i + row_i]);
+            }
+        }
+
+        U.elements[rows * row_i + row_i] = 1;
+
+        for (row_t = (row_i + 1); row_t < rows; row_t++)
+        {
+
+            for (col_j = (row_i + 1); col_j < cols; col_j++)
+            {
+
+                U.elements[rows * row_t + col_j] = U.elements[rows * row_t + col_j]
+                                               - ( U.elements[rows * row_t + row_i]
+                                                 * U.elements[rows * row_i + col_j]
+                                                 );
+            }
+
+            src = (__m128 *)(U.elements + (rows * row_t + col_j));
+            op_1 = _mm_set_ps1(U.elements[rows * row_t + row_i]);
+
+            for (; col_j < cols; col_j += 4)
+            {
+                op_2 = _mm_load_ps(U.elements + (rows * row_i) + col_j);
+                op_2 = _mm_mul_ps(op_1, op_2);
+                *src = _mm_sub_ps(*src, op_2);
+                src++;
+            }
+
+            if (col_j != cols)
+            {
+                col_j -= 4;
+                for (; col_j < cols; col_j++)
+                {
+                    U.elements[rows * row_t + col_j] = U.elements[rows * row_t + col_j]
+                                                   - ( U.elements[rows * row_t + row_i]
+                                                     * U.elements[rows * row_i + col_j]
+                                                     );
+                }
+            }
+
+            U.elements[rows * row_t + row_i] = 0;
+        }
+    }
 }
 
 
