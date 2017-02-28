@@ -86,10 +86,9 @@ void
 gauss_eliminate_using_sse(const Matrix A, Matrix U)                  /* Write code to perform gaussian elimination using OpenMP. */
 {
     unsigned int i, j, k;
-    unsigned int row_i, row_t, col_i;
     unsigned int rows = A.num_rows;
     unsigned int cols = A.num_columns;
-    float *ptr;
+    unsigned int row_i, row_t, col_i;
     __m128 *src, sse_1, sse_2;
 
 
@@ -117,6 +116,7 @@ gauss_eliminate_using_sse(const Matrix A, Matrix U)                  /* Write co
         }
 
         src = (__m128 *)(U.elements + (rows * row_i + col_i));
+
         sse_1 = _mm_set_ps1(U.elements[rows * row_i + row_i]);
 
         for (; col_i < cols; col_i += 4)
