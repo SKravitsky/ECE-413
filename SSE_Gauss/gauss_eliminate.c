@@ -98,13 +98,13 @@ gauss_eliminate_using_sse(const Matrix A, Matrix U)                  /* Write co
 	}
 
 	float *ptr;
-	__m128 *src;
-	__m128 op_1;
-	__m128 op_2;
+    __m128 *src;
+    __m128 op_1;
+    __m128 op_2;
 
 	for(row_i = 0; row_i < rows; row_i++)
 	{
-		for(col_j = (row_i + 1); col_j++)
+		for(col_j = (row_i + 1); col_j < cols; col_j++)
 		{
 			U.elements[rows * row_i + col_j] = (float)(U.elements[rows * row_i + col_j] / U.elements[rows * row_i + col_j]);
 		}
