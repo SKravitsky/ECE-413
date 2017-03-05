@@ -104,7 +104,7 @@ vec_mat_mult_on_device_using_global_memory(const Matrix A, const Matrix X, Matri
 	dim3 dimBlock(MATRIX_SIZE, 1, 1);
 	dim3 dimGrid(MATRIX_SIZE,1);
 
-	vec_mat_mult_kernel <<< dimGrid, dimBlock >>> (A_dev, X_dev, Y_dev);
+	vec_mat_kernel_naive <<< dimGrid, dimBlock >>> (A_dev, X_dev, Y_dev);
 
 	copy_matrix_from_device(Y, Y_dev);
 
