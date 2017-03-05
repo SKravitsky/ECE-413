@@ -119,6 +119,7 @@ gauss_eliminate_using_sse(const Matrix A, Matrix U)                  /* Write co
 
         sse_1 = _mm_set_ps1(U.elements[rows * row_i + row_i]);
 
+        // Elements which can fill a full word get processed
         for (; col_i < cols; col_i += 4)
         {
 
@@ -136,7 +137,9 @@ gauss_eliminate_using_sse(const Matrix A, Matrix U)                  /* Write co
             }
         }
 
+        // Set diag to 1
         U.elements[rows * row_i + row_i] = 1;
+
 
         for (row_t = (row_i + 1); row_t < rows; row_t++)
         {
@@ -155,8 +158,10 @@ gauss_eliminate_using_sse(const Matrix A, Matrix U)                  /* Write co
             }
 
             src = (__m128 *)(U.elements + (rows * row_t + col_i));
+            
             sse_1 = _mm_set_ps1(U.elements[rows * row_t + row_i]);
 
+            // Elements which can fill a full word get processed
             for (; col_i < cols; col_i += 4)
             {
                 sse_2 = _mm_load_ps(U.elements + (rows * row_i) + col_i);
@@ -180,7 +185,9 @@ gauss_eliminate_using_sse(const Matrix A, Matrix U)                  /* Write co
 
             U.elements[rows * row_t + row_i] = 0;
         }
+
     }
+
 }
 
 int 
