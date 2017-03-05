@@ -32,6 +32,7 @@ int checkResults(float *, float *, int, float);
 
 int 
 main(int argc, char** argv) {
+	struct timeval start, stop;
 	// Matrices for the program
 	Matrix  A; // N x N matrix
 	Matrix  X; // N x 1 vector
@@ -53,8 +54,11 @@ main(int argc, char** argv) {
 	Y_gpu_1 = allocate_matrix(MATRIX_SIZE, 1, 0); 
     Y_gpu_2 = allocate_matrix(MATRIX_SIZE, 1, 0);
  
-    // compute the vector-matrix multiplication on the CPU for comparison    	
+    // compute the vector-matrix multiplication on the CPU for comparison   
+    gettimeofday(&start, NULL); 	
 	compute_gold(Y_cpu.elements, A.elements, X.elements, A.num_rows, A.num_columns);
+	gettimeofday(&stop, NULL);
+	printf("CPU Compute: %fs \n",(float)(stop.tv_sec - start.tv_sec + (stop.tv_usec - start.tv_usec)/(float)1000000));
 	
 	// Perform the vector-matrix multiplication on the GPU using global memory
     // Return the results in Y_gpu_1
