@@ -10,14 +10,54 @@
 /* Write the kernel for vector-matrix multiplication using GPU global memory. */
 __global__ void vec_mat_kernel_naive(float *Ad, float *Xd, float *Yd)
 {
-	//Multiply A and X
+	int tid = threadIDx.x + blockIDx.x*blockDim.x;
+	float final = 0;
+
+	for(unsigned int i = 0; i < MATRIX_SIZE; i++)
+	{
+		float a = Ad[tid * MATRIX_SIZE + i];
+		float b = Xd[i];
+		final += a * b;
+	}
+	
+	Yd[tid] = final;
+
 }
 
 
 /* Write the kernel for vector-matrix multiplication using GPU shared memory. */
 __global__ void vec_mat_kernel_optimized(float *Ad, float *Xd, float *Yd)
 {
-	//Multiply A and X
+	__shared__ float a[16][16]
+	__shared__ float b[16]
+
+	int tx = threadIDx.x;
+	int ty = threadIDx.y;
+	int row = blockIDx.y*blockDim.y;
+
+	int final = 0;
+
+	for(unsigned int i = 0; i < MATRIX_SIZE; i += 16)
+	{
+		a[ty][tx] = Ad[row * MATRIX_SIZE + i + tx];
+		b[tx] = Xd[tx + i];
+
+		__syncthreads();
+		if(threadIDx.x==0)
+		{
+			for(unsigned int j =0; j < blockDim.x; j++)
+			{
+				final += a[tx][j] * b[j]
+			}
+		}
+		__syncthreads();
+	}
+	
+	if(threadIDx.x == 0)
+	{
+		Yd[row] = final;
+	}
+	
 }
 
 

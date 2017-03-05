@@ -68,12 +68,12 @@ main(int argc, char** argv) {
 
     // Perform the vector-matrix multiplication on the GPU using shared memory
     // Return the results in Y_gpu_2
-	vec_mat_mult_on_device_using_shared_memory(A, X, Y_gpu_2);
+	////vec_mat_mult_on_device_using_shared_memory(A, X, Y_gpu_2);
    
 	// check if the device result is equivalent to the expected solution
-    printf("Checking against reference result. \n");
-    res = checkResults(Y_cpu.elements, Y_gpu_2.elements, size_elements, 0.0001);
-	printf("Test %s\n", (1 == res) ? "PASSED" : "FAILED");
+    ////printf("Checking against reference result. \n");
+    ////res = checkResults(Y_cpu.elements, Y_gpu_2.elements, size_elements, 0.0001);
+	////printf("Test %s\n", (1 == res) ? "PASSED" : "FAILED");
 
 	// Free host matrices
 	free(A.elements); A.elements = NULL;
@@ -90,6 +90,27 @@ main(int argc, char** argv) {
 void 
 vec_mat_mult_on_device_using_global_memory(const Matrix A, const Matrix X, Matrix Y)
 {
+	Matrix A_dev;
+	Matrix X_dev;
+	Matrix Y_dev;
+
+	A_dev = allocate_matrix_on_gpu(A);
+	X_dev = allocate_matrix_on_gpu(X);
+	Y_dev = allocate_matrix_on_gpu(Y);
+
+	copy_matrix_to_device(A_dev, A);
+	copy_matrix_to_device(X_dev, X);
+
+	dim3 dimBlock(MATRIX_SIZE, 1, 1);
+	dim3 dimGrid(MATRIX_SIZE,1);
+
+	vec_mat_mult_kernel <<< dimGrid, dimBlock >>> (A_dev, X_dev, Y_dev);
+
+	copy_matrix_from_device(Y, Y_dev);
+
+	cudaFree(A_dev);
+	cudaFree(X_dev);
+	cudaFree(Y_dev);	
 
 }
 
