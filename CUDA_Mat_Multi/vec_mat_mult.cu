@@ -69,12 +69,12 @@ main(int argc, char** argv) {
 
     // Perform the vector-matrix multiplication on the GPU using shared memory
     // Return the results in Y_gpu_2
-	////vec_mat_mult_on_device_using_shared_memory(A, X, Y_gpu_2);
+	vec_mat_mult_on_device_using_shared_memory(A, X, Y_gpu_2);
    
 	// check if the device result is equivalent to the expected solution
-    ////printf("Checking against reference result. \n");
-    ////res = checkResults(Y_cpu.elements, Y_gpu_2.elements, size_elements, 0.0001);
-	////printf("Test %s\n", (1 == res) ? "PASSED" : "FAILED");
+    printf("Checking against reference result. \n");
+    res = checkResults(Y_cpu.elements, Y_gpu_2.elements, size_elements, 0.0001);
+	printf("Test %s\n", (1 == res) ? "PASSED" : "FAILED");
 
 	// Free host matrices
 	free(A.elements); A.elements = NULL;
@@ -111,14 +111,13 @@ vec_mat_mult_on_device_using_global_memory(const Matrix A, const Matrix X, Matri
 	cudaThreadSynchronize();
 	gettimeofday(&stop, NULL);
 
-	printf("CUDA GPU (global memory): %fs. \n",(float)(stop.tv_sec - start.tv_sec + (stop.tv_usec - start.tv_usec)/(float)1000000));
-
-
 	copy_matrix_from_device(Y, Y_dev);
 
 	cudaFree(A_dev.elements);
 	cudaFree(X_dev.elements);
 	cudaFree(Y_dev.elements);	
+
+	printf("CUDA Global: %fs \n",(float)(stop.tv_sec - start.tv_sec + (stop.tv_usec - start.tv_usec)/(float)1000000));
 
 }
 
@@ -127,6 +126,33 @@ vec_mat_mult_on_device_using_global_memory(const Matrix A, const Matrix X, Matri
 void 
 vec_mat_mult_on_device_using_shared_memory(const Matrix A, const Matrix X, Matrix Y)
 {
+	struct timeval start, stop; 
+	Matrix A_dev;
+	Matrix X_dev;
+	Matrix Y_dev;
+
+	A_dev = allocate_matrix_on_gpu(A);
+	X_dev = allocate_matrix_on_gpu(X);
+	Y_dev = allocate_matrix_on_gpu(Y);
+
+	copy_matrix_to_device(A_dev, A);
+	copy_matrix_to_device(X_dev, X);
+
+	dim3 dimBlock(16, 16);
+	dim3 dimGrid(MATRIX_SIZE/dimBlock.x,1);
+
+	gettimeofday(&start, NULL);
+	vec_mat_kernel_optimized <<< dimGrid, dimBlock >>> (A_dev.elements, X_dev.elements, Y_dev.elements);
+	cudaThreadSynchronize();
+	gettimeofday(&stop, NULL);
+
+	copy_matrix_from_device(Y, Y_dev);
+
+	cudaFree(A_dev.elements);
+	cudaFree(X_dev.elements);
+	cudaFree(Y_dev.elements);	
+
+	printf("CUDA Shared: %fs \n",(float)(stop.tv_sec - start.tv_sec + (stop.tv_usec - start.tv_usec)/(float)1000000));
 
 }
 
