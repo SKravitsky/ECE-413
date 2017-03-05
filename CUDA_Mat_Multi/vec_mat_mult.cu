@@ -110,7 +110,7 @@ vec_mat_mult_on_device_using_global_memory(const Matrix A, const Matrix X, Matri
 	cudaThreadSynchronize();
 	gettimeofday(&stop, NULL);
 
-	printf("CUDA GPU (global memory): %fs. \n",(float)(stop1.tv_sec - start1.tv_sec + (stop1.tv_usec - start1.tv_usec)/(float)1000000));
+	printf("CUDA GPU (global memory): %fs. \n",(float)(stop.tv_sec - start.tv_sec + (stop.tv_usec - start.tv_usec)/(float)1000000));
 
 
 	copy_matrix_from_device(Y, Y_dev);
