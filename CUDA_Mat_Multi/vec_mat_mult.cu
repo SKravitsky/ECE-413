@@ -90,6 +90,7 @@ main(int argc, char** argv) {
 void 
 vec_mat_mult_on_device_using_global_memory(const Matrix A, const Matrix X, Matrix Y)
 {
+	struct timeval start, stop; 
 	Matrix A_dev;
 	Matrix X_dev;
 	Matrix Y_dev;
@@ -101,16 +102,22 @@ vec_mat_mult_on_device_using_global_memory(const Matrix A, const Matrix X, Matri
 	copy_matrix_to_device(A_dev, A);
 	copy_matrix_to_device(X_dev, X);
 
-	dim3 dimBlock(MATRIX_SIZE, 1, 1);
-	dim3 dimGrid(MATRIX_SIZE,1);
+	dim3 dimBlock(512, 1);
+	dim3 dimGrid(MATRIX_SIZE/dimBlock.x,1);
 
-	vec_mat_kernel_naive <<< dimGrid, dimBlock >>> (A_dev, X_dev, Y_dev);
+	gettimeofday(&start, NULL);
+	vec_mat_kernel_naive <<< dimGrid, dimBlock >>> (A_dev.elements, X_dev.elements, Y_dev.elements);
+	cudaThreadSynchronize();
+	gettimeofday(&stop, NULL);
+
+	printf("CUDA GPU (global memory): %fs. \n",(float)(stop1.tv_sec - start1.tv_sec + (stop1.tv_usec - start1.tv_usec)/(float)1000000));
+
 
 	copy_matrix_from_device(Y, Y_dev);
 
-	cudaFree(A_dev);
-	cudaFree(X_dev);
-	cudaFree(Y_dev);	
+	cudaFree(A_dev.elements);
+	cudaFree(X_dev.elements);
+	cudaFree(Y_dev.elements);	
 
 }
 

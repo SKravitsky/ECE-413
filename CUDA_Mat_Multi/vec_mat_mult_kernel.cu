@@ -43,7 +43,7 @@ __global__ void vec_mat_kernel_optimized(float *Ad, float *Xd, float *Yd)
 		b[tx] = Xd[tx + i];
 
 		__syncthreads();
-		if(threadIDx.x==0)
+		if(threadIdx.x==0)
 		{
 			for(unsigned int j =0; j < blockDim.x; j++)
 			{
@@ -53,7 +53,7 @@ __global__ void vec_mat_kernel_optimized(float *Ad, float *Xd, float *Yd)
 		__syncthreads();
 	}
 	
-	if(threadIDx.x == 0)
+	if(threadIdx.x == 0)
 	{
 		Yd[row] = final;
 	}
