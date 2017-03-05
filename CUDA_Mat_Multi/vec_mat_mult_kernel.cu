@@ -10,9 +10,11 @@
 /* Write the kernel for vector-matrix multiplication using GPU global memory. */
 __global__ void vec_mat_kernel_naive(float *Ad, float *Xd, float *Yd)
 {
+	//Creating the threadID counter and a tem variable for the sum
 	int tid = threadIdx.x + blockIdx.x*blockDim.x;
 	float final = 0;
 
+	//This is basically the samme as the compute_gold function but with the threadIDs as an iterator
 	for(unsigned int i = 0; i < MATRIX_SIZE; i++)
 	{
 		float a = Ad[tid * MATRIX_SIZE + i];
@@ -28,9 +30,11 @@ __global__ void vec_mat_kernel_naive(float *Ad, float *Xd, float *Yd)
 /* Write the kernel for vector-matrix multiplication using GPU shared memory. */
 __global__ void vec_mat_kernel_optimized(float *Ad, float *Xd, float *Yd)
 {
+	//Creating the shared variables
 	__shared__ float a[16][16];
 	__shared__ float b[16];
 
+	//Separating the threadId variables so they can be used by the shared variables
 	int tx = threadIdx.x;
 	int ty = threadIdx.y;
 	int row = blockIdx.y*blockDim.y;
@@ -39,9 +43,11 @@ __global__ void vec_mat_kernel_optimized(float *Ad, float *Xd, float *Yd)
 
 	for(unsigned int i = 0; i < MATRIX_SIZE; i += 16)
 	{
+		//Splitting the work over the threads
 		a[ty][tx] = Ad[row * MATRIX_SIZE + i + tx];
 		b[tx] = Xd[tx + i];
 
+		//Making sure all the threads in the block have finished their computation before putting it into the final array
 		__syncthreads();
 		if(threadIdx.x==0)
 		{

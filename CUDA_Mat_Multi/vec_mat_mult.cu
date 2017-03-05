@@ -92,27 +92,34 @@ void
 vec_mat_mult_on_device_using_global_memory(const Matrix A, const Matrix X, Matrix Y)
 {
 	struct timeval start, stop; 
+	//Creating device copies of each matrix
 	Matrix A_dev;
 	Matrix X_dev;
 	Matrix Y_dev;
 
+	//Allocating each Matrix onto the GPU
 	A_dev = allocate_matrix_on_gpu(A);
 	X_dev = allocate_matrix_on_gpu(X);
 	Y_dev = allocate_matrix_on_gpu(Y);
 
+	//Coping the two input matricies to the device
 	copy_matrix_to_device(A_dev, A);
 	copy_matrix_to_device(X_dev, X);
 
+	//Setting the block and grid sizes to be used in the kernel
 	dim3 dimBlock(512, 1);
 	dim3 dimGrid(MATRIX_SIZE/dimBlock.x,1);
 
+	//Calling the kernel with the block and grid sices, pushing the device elements
 	gettimeofday(&start, NULL);
 	vec_mat_kernel_naive <<< dimGrid, dimBlock >>> (A_dev.elements, X_dev.elements, Y_dev.elements);
 	cudaThreadSynchronize();
 	gettimeofday(&stop, NULL);
 
+	//Getting the output matrix from the gpu
 	copy_matrix_from_device(Y, Y_dev);
 
+	//Freeing up the elements off the GPU
 	cudaFree(A_dev.elements);
 	cudaFree(X_dev.elements);
 	cudaFree(Y_dev.elements);	
