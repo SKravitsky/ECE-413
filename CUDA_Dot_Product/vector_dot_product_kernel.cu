@@ -11,8 +11,8 @@ __global__ void vector_dot_product_kernel(int num_elements, float* a, float* b, 
 {
 	__shared__ float sum[BLOCK_SIZE];
 	
-	int tx = threadId.x;
-	int tid = blockDim.x * blockId.x + threadId.x;
+	int tx = threadIdx.x;
+	int tid = blockDim.x * blockIdx.x + threadIdx.x;
 	int stride = blockDim.x * gridDim.x;
 
 	float local_sum = 0.0f;
@@ -24,19 +24,19 @@ __global__ void vector_dot_product_kernel(int num_elements, float* a, float* b, 
 		i += stride;
 	}
 
-	sum[threadId.x] = local_sum;
+	sum[threadIdx.x] = local_sum;
 	__syncthreads();
 
-	for(int stride = blockDim.x/2; stride > 0; stide /= 2)
+	for(int stride = blockDim.x/2; stride > 0; stride /= 2)
 	{
 		if(tx < stride)
 			sum[tx] += sum[tx + stride];
 		__syncthreads();
 	}
 
-	if(threadId.x == 0)
+	if(threadIdx.x == 0)
 	{
-		lock(mutx);
+		lock(mutex);
 		result[0] += sum[0];
 		unlock(mutex);
 	}

@@ -102,9 +102,9 @@ float compute_on_device(float *A_on_host, float *B_on_host, int num_elements)
 	gettimeofday(&stop, NULL);
 
 	printf("Execution time = %fs. \n", (float)(stop.tv_sec - start.tv_sec + (stop.tv_sec - start.tv_sec)/(float)1000000));
-	check_for_error("Error in Kernel execution")
+	check_for_error("Error in Kernel execution");
 	
-	float result = 0.0f;
+	float result;
 	cudaMemcpy( &result, C_dev, sizeof(float), cudaMemcpyDeviceToHost );
 
 	cudaFree(A_dev);
