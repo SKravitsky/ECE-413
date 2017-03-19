@@ -28,6 +28,8 @@ int main( int argc, char** argv)
 /* Perform vector dot product on the CPU and the GPU and compare results for correctness.  */
 void run_test(unsigned int num_elements) 
 {
+	struct timeval start, stop;
+
 	// Obtain the vector length
 	unsigned int size = sizeof(float) * num_elements;
 
@@ -46,8 +48,12 @@ void run_test(unsigned int num_elements)
 	printf("Generating dot product on the CPU. \n");
 	
 	// Compute the reference solution on the CPU
+	gettimeofday(&start, NULL);
 	float reference = compute_gold(A, B, num_elements);
+	gettimeofday(&stop, NULL);
 
+	printf("CPU Execution time = %fus. \n", (float)(stop.tv_usec - start.tv_usec + (stop.tv_usec - start.tv_usec)/(float)1000000));
+	
 	/* Edit this function to compute the result vector on the GPU. 
        The result should be placed in the gpu_result variable. */
 	float gpu_result = compute_on_device(A, B, num_elements);
@@ -101,7 +107,7 @@ float compute_on_device(float *A_on_host, float *B_on_host, int num_elements)
 	cudaThreadSynchronize();
 	gettimeofday(&stop, NULL);
 
-	printf("Execution time = %fs. \n", (float)(stop.tv_sec - start.tv_sec + (stop.tv_sec - start.tv_sec)/(float)1000000));
+	printf("GPU Execution time = %fus. \n", (float)(stop.tv_usec - start.tv_usec + (stop.tv_usec - start.tv_usec)/(float)1000000));
 	check_for_error("Error in Kernel execution");
 	
 	float result;
