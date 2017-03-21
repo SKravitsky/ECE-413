@@ -26,7 +26,7 @@ __global__ void trap_kernel(float a, float b, int n, float h, float *Result_Vect
         __syncthreads();
         if (threadIdx.x + j < blockDim.x)
         {
-            p[threadIdx.x] += p[threadIdx.x + k];
+            p[threadIdx.x] += p[threadIdx.x + j];
         }
     }
 

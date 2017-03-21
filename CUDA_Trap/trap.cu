@@ -8,7 +8,7 @@
 // includes, kernels
 #include "trap_kernel.cu"
 
-#define BLOCK_DIM = 128
+#define BLOCK_DIM 128
 #define LEFT_ENDPOINT 10
 #define RIGHT_ENDPOINT 1005
 #define NUM_TRAPEZOIDS 100000000
