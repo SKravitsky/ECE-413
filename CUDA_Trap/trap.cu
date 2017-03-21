@@ -53,7 +53,7 @@ compute_on_device(float a, float b, int n, float h)
 	float *results = (float *)malloc(num_columns * sizeof(float));
 	float *R_dev;
 
-    cudaMalloc((void**)&R_dev, num_cols * sizeof(float));
+    cudaMalloc((void**)&R_dev, num_columns * sizeof(float));
 
 	dim3 dimBlock(BLOCK_DIM, 1, 1);
 	dim3 dimGrid(num_columns, 1);

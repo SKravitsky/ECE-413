@@ -4,7 +4,7 @@
 
 __global__ void trap_kernel(float a, float b, int n, float h, float *Result_Vector)
 {
-	__shared__ float p[BLOCK_DIM];
+	__shared__ float p[128];
 
 	unsigned int column = blockIdx.x * blockDim.x + threadIdx.x + 1;
 	unsigned int stride = blockDim.x * gridDim.x;
